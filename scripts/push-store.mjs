@@ -19,6 +19,7 @@ import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { ROOT, args, DRY, flag, opt, connect, gql, onlineStorePublicationId, inline, mdToHtml, frontMatter, plainText } from "./lib/shopify.mjs";
 import { THEME_FILES, buildThemeFiles } from "./lib/theme.mjs";
+import { HORIZON_FILES, buildHorizonFiles } from "./lib/theme-horizon.mjs";
 
 const onlyIdx = args.indexOf("--only");
 const ONLY = onlyIdx >= 0 ? new Set(args[onlyIdx + 1].split(",")) : null;
@@ -59,8 +60,14 @@ async function pushPolicies() {
   for (const [name, type] of Object.entries(POLICY_TYPES)) {
     const md = await readFile(path.join(ROOT, "content/policies", `${name}.md`), "utf8");
     console.log(`policy ${type}`);
-    await gql(`mutation($p:ShopPolicyInput!){ shopPolicyUpdate(shopPolicy:$p){ shopPolicy{id} userErrors{field message} } }`,
-      { p: { type, body: mdToHtml(md.replace(/^#\s.*\n/, "")) } });
+    try {
+      await gql(`mutation($p:ShopPolicyInput!){ shopPolicyUpdate(shopPolicy:$p){ shopPolicy{id} userErrors{field message} } }`,
+        { p: { type, body: mdToHtml(md.replace(/^#\s.*\n/, "")) } });
+    } catch (e) {
+      if (!/Automatic management/i.test(e.message)) throw e;
+      // Shopify generates this policy itself until the owner switches that off in Settings → Policies.
+      console.log(`  skipped: Shopify manages this policy automatically. Settings → Policies → ${name} → turn off automatic management, then re-run with --only policies.`);
+    }
   }
 }
 
@@ -155,15 +162,24 @@ async function pushDiscounts() {
 }
 
 // ---------- theme ----------
+// Supports Dawn and Horizon (Shopify's two free defaults). Reads the live theme's JSON, merges store/theme-settings.json, writes back.
+const THEMES = { dawn: { files: THEME_FILES, build: buildThemeFiles }, horizon: { files: HORIZON_FILES, build: buildHorizonFiles } };
+function themeKind(schemaJson, name) {
+  const schema = schemaJson ? JSON.parse(schemaJson.replace(/^\s*\/\*[\s\S]*?\*\/\s*/, "")) : [];
+  const info = schema.find((g) => g.name === "theme_info");
+  const label = `${info?.theme_name || ""} ${name || ""}`;
+  return { kind: /horizon/i.test(label) ? "horizon" : /dawn/i.test(label) ? "dawn" : null, label: `${info?.theme_name || name || "?"} ${info?.theme_version || ""}`.trim() };
+}
 async function pushTheme() {
   const cfg = await readJson("store/theme-settings.json");
   const themeDir = opt("--theme-dir");
+  const allFiles = [...new Set([...THEME_FILES, ...HORIZON_FILES])];
   let files = {};
   let themeId;
   if (DRY && themeDir) {
-    for (const f of THEME_FILES) files[f] = await readFile(path.join(themeDir, f), "utf8").catch(() => undefined);
+    for (const f of allFiles) files[f] = await readFile(path.join(themeDir, f), "utf8").catch(() => undefined);
   } else if (DRY) {
-    console.log(`  [dry-run] would read ${THEME_FILES.join(", ")} from the live theme and merge store/theme-settings.json into them (pass --theme-dir <dawn checkout> to preview the merge)`);
+    console.log(`  [dry-run] would read the live theme's JSON and merge store/theme-settings.json into it (pass --theme-dir <theme checkout> to preview the merge)`);
     return;
   } else {
     const themes = (await gql(`{ themes(first:20){ nodes{ id name role } } }`)).themes.nodes;
@@ -171,15 +187,14 @@ async function pushTheme() {
     if (!main) throw new Error("No published (MAIN) theme found");
     themeId = main.id;
     const got = (await gql(`query($id:ID!,$names:[String!]!){ theme(id:$id){ files(filenames:$names, first:20){ nodes{ filename body{ ... on OnlineStoreThemeFileBodyText{ content } } } } } }`,
-      { id: themeId, names: THEME_FILES })).theme.files.nodes;
+      { id: themeId, names: allFiles })).theme.files.nodes;
     for (const n of got) files[n.filename] = n.body?.content;
-    const schema = files["config/settings_schema.json"] ? JSON.parse(files["config/settings_schema.json"]) : [];
-    const info = schema.find((g) => g.name === "theme_info");
-    console.log(`  theme "${main.name}" (${info?.theme_name || "?"} ${info?.theme_version || ""})`);
-    if (!/dawn/i.test(info?.theme_name || main.name)) { console.log("  not Dawn: skipping theme settings (the keys below are Dawn's). Apply store/theme-settings.json by hand in the theme editor."); return; }
-    if (!files["config/settings_data.json"]) throw new Error("Could not read config/settings_data.json from the theme");
   }
-  const out = buildThemeFiles(files, cfg);
+  const { kind, label } = themeKind(files["config/settings_schema.json"], themeId ? undefined : path.basename(themeDir));
+  console.log(`  theme: ${label}`);
+  if (!kind) { console.log("  neither Dawn nor Horizon: skipping theme settings. Apply store/theme-settings.json by hand in the theme editor."); return; }
+  if (!files["config/settings_data.json"]) throw new Error("Could not read config/settings_data.json from the theme");
+  const out = THEMES[kind].build(files, cfg);
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupDir = path.join(ROOT, ".backup", DRY ? "theme-preview" : `theme/${stamp}`);
   for (const [name, content] of Object.entries(out)) {

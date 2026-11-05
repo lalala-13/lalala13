@@ -3,18 +3,26 @@
 What is automated, what the owner still has to click, and in which order.
 Companion to `SETUP-GUIDE.md`. Tick items top to bottom.
 
-## 1. Unblock API access (owner, 2 minutes)
+## 0. Status (2026-11-05, evening)
 
-The build run on 2026-11-05 stopped at the first API call with
-`Token exchange failed (400): app_not_installed`. The Dev Dashboard app exists
-(client ID and secret are in the environment) but was never installed on the
-store, so Shopify refuses to issue a token.
+Live on `hd2ykn-1r.myshopify.com`: the four pages with meta titles, the 12
+collections with SEO, both menus, US shipping ($4.95 up to $49.99, free from
+$50), the `WELCOME10` code, the Age & safety product metafield, and the
+Horizon theme branding. Not yet: policies (see 1), products (see 3), the
+admin-only settings (see 4), the test order and launch (5, 6).
 
-- [ ] Open <https://dev.shopify.com> → your app (`claude-store-builder`) →
-      **Home** → **Install app** → choose `hd2ykn-1r.myshopify.com` → Install.
-      If "Install app" is greyed out, open **Versions** and **Release** the
-      version that lists the scopes first (SETUP-GUIDE A5.3).
-- [ ] Tell Claude "build the Bubble Sharks store" again, or run step 2 yourself.
+## 1. Policies and store name (owner, 3 minutes)
+
+New stores let Shopify generate the policies ("automatic management"), which
+blocks the API from replacing them with ours.
+
+- [x] Install the Dev Dashboard app on the store (done 2026-11-05).
+- [ ] **Settings → Policies:** open Privacy, Refund, Shipping and Terms in
+      turn and switch off automatic management. Then Claude runs
+      `node scripts/push-store.mjs --only policies`, or run it yourself.
+- [ ] **Settings → Store details:** store name `Bubble Sharks` (it is still
+      "My Store"), customer-facing email `support@bubblesharks.com`. Neither
+      is reachable through the API.
 
 ## 2. One command pushes the store skeleton (Claude, 1 minute)
 
@@ -32,11 +40,11 @@ Idempotent, safe to re-run. It sets:
 | menus | Main menu (by type, by age, Under $15, New, About) and footer menu | `store/navigation.json` |
 | shipping | US zone: $4.95 flat up to $49.99, free from $50; existing rates in that zone are replaced | `store/shipping.json` |
 | discount | `WELCOME10`, 10% off, once per customer, stacks with shipping discounts only | `store/discounts.json` |
-| theme | Dawn colours, Fredoka/Nunito, rounded cards, announcement bar, homepage sections, product page tabs, footer | `store/theme-settings.json` |
+| theme | Brand colours, Fredoka/Nunito, rounded corners, announcement bar, homepage sections, product page tabs, footer; Horizon (the store's theme) and Dawn are supported | `store/theme-settings.json` |
 
-The theme step edits the live Dawn theme's JSON files and keeps the originals
-in `.backup/theme/<timestamp>/`. To preview the merge without a store:
-`node scripts/push-store.mjs --dry-run --only theme --theme-dir <dawn checkout>`.
+The theme step edits the live theme's JSON files and keeps the originals in
+`.backup/theme/<timestamp>/`. To preview the merge without a store:
+`node scripts/push-store.mjs --dry-run --only theme --theme-dir <theme checkout>`.
 
 - [ ] Run it. Check `bubblesharks.com` (or the `.myshopify.com` preview with
       the password) for: menu, footer links, policies in the footer, the
@@ -98,10 +106,11 @@ collection and the homepage).
       visitor. The homepage and footer newsletter blocks already collect
       emails without it.
 - [ ] **Theme editor (Online Store → Themes → Customize):** upload the logo
-      (brief in `brand/brand-kit.md`), a hero image on the first homepage
-      section (switch it from the solid-colour "rich text" block to an
-      "image banner" once you have one), and one image per collection
-      (automated collections otherwise show their first product's photo).
+      (brief in `brand/brand-kit.md`). The homepage opens with a solid
+      blue block instead of a photo; once you have a hero image, add a
+      Horizon "Hero" section above it and delete the blue block. Give each
+      collection an image (automated collections otherwise show their first
+      product's photo).
 - [ ] **Settings → Store details:** support email `support@bubblesharks.com`,
       forwarded to your Gmail; customer-facing email the same.
 

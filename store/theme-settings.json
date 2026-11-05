@@ -1,11 +1,11 @@
 {
-  "theme": "Dawn (free, Shopify default). scripts/push-store.mjs --only theme writes these into the live Dawn theme; other themes are skipped.",
+  "theme": "Horizon (Shopify default since 2025) or Dawn. scripts/push-store.mjs --only theme writes these into the live theme; other themes are skipped.",
   "colors": {
     "background": "#F4FBFF", "text": "#0B2545", "button": "#0E6BA8",
     "button_label": "#FFFFFF", "accent": "#FF6B57", "secondary_background": "#7FD1F5", "highlight": "#FFD166",
     "sale_badge": "#FF6B57", "sold_out_badge": "#0B2545"
   },
-  "typography": { "heading_font": "fredoka_n7", "body_font": "nunito_n4", "heading_scale": 110, "body_scale": 100 },
+  "typography": { "heading_font": "fredoka_n7", "subheading_font": "nunito_n7", "body_font": "nunito_n4", "heading_scale": 110, "body_scale": 100 },
   "layout": { "page_width": 1400, "border_radius": 16, "button_radius": 40, "card_style": "card", "card_image_padding": 8 },
   "brand": { "headline": "Bubble Sharks", "description": "Big fun, little prices. Hand-picked toys for ages 3–12, shipped across the US." },
   "announcement_bar": "Free US shipping over $50 · 30-day easy returns · Code WELCOME10 for 10% off",

@@ -75,18 +75,19 @@ try again. `invalid_client` means the Client ID or secret was copied wrong.
 
 ## Part B — What Claude does next (no action from you)
 
-Status on 2026-11-05: the first run stopped at the token exchange with
-`app_not_installed` (see the note at the end of A5). Everything below is prepared in
-this repository and runs the moment the app is installed. The ordered
-checklist, including the few admin screens that have no API, is in
+Status on 2026-11-05: the app is installed and step 1 has run. Pages,
+collections, menus, shipping, the discount code and the theme branding are
+live. Policies wait for the owner to switch off Shopify's automatic policy
+management (Settings → Policies); products wait for the supplier import. The
+ordered checklist, including the few admin screens that have no API, is in
 [`HANDOFF-CHECKLIST.md`](HANDOFF-CHECKLIST.md).
 
 1. **Store skeleton, one command:** `node scripts/push-store.mjs` pushes pages
    and their meta titles, policies, the 12 collections, both menus, US
    shipping rates (free over $50, $4.95 under), the `WELCOME10` code and the
-   Dawn theme settings (colours, fonts, announcement bar, homepage sections,
-   product-page tabs, footer). Idempotent; `--dry-run` previews, `--only`
-   picks steps.
+   theme branding (colours, fonts, announcement bar, homepage sections,
+   product-page tabs, footer; Horizon and Dawn supported). Idempotent;
+   `--dry-run` previews, `--only` picks steps.
 2. **Products:** `store/products.json` is the launch catalogue, 36 slots
    written to the sourcing rules (titles, prices, tags, descriptions, age and
    safety text, what to search for in Zendrop and the landed cost each price
