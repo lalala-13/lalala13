@@ -68,17 +68,42 @@ January 2026). They are made in the **Dev Dashboard** instead.
 7. Start a **new** session and say "build the Bubble Sharks store". The script
    swaps the client ID and secret for a short-lived token each run.
 
+**If Claude reports `Token exchange failed (400): app_not_installed`**, step 4
+was skipped or done on another store: in the Dev Dashboard open the app →
+**Home** → **Install app** → pick `hd2ykn-1r.myshopify.com` → Install, then
+try again. `invalid_client` means the Client ID or secret was copied wrong.
+
 ## Part B — What Claude does next (no action from you)
-1. Push brand, theme settings, collections, navigation, pages and policies
-   (`scripts/push-store.mjs`).
-2. Pick 30–50 launch products in the supplier app against the sourcing rules,
-   rewrite titles and descriptions, set prices (2.5–3× landed cost, charm
-   pricing), assign collections, add age grading and safety text.
-3. Set shipping (free over $50, flat $4.95 under), taxes (automatic), checkout
-   settings, abandoned-cart email, order-confirmation copy.
-4. Set up SEO basics, Google and Meta pixels (once you give the IDs), a launch
-   discount code and a welcome pop-up.
-5. Test checkout with a Bogus Gateway order, then flip the store password off.
+
+Status on 2026-11-05: the first run stopped at the token exchange with
+`app_not_installed` (see the note at the end of A5). Everything below is prepared in
+this repository and runs the moment the app is installed. The ordered
+checklist, including the few admin screens that have no API, is in
+[`HANDOFF-CHECKLIST.md`](HANDOFF-CHECKLIST.md).
+
+1. **Store skeleton, one command:** `node scripts/push-store.mjs` pushes pages
+   and their meta titles, policies, the 12 collections, both menus, US
+   shipping rates (free over $50, $4.95 under), the `WELCOME10` code and the
+   Dawn theme settings (colours, fonts, announcement bar, homepage sections,
+   product-page tabs, footer). Idempotent; `--dry-run` previews, `--only`
+   picks steps.
+2. **Products:** `store/products.json` is the launch catalogue, 36 slots
+   written to the sourcing rules (titles, prices, tags, descriptions, age and
+   safety text, what to search for in Zendrop and the landed cost each price
+   supports). Importing from the supplier app needs your login; after that
+   `node scripts/push-products.mjs` rewrites each verified product and
+   `--audit` checks the whole store against the rules.
+3. **Shipping and the discount code** are covered by step 1. Taxes are
+   automatic on new US stores; confirm the state in Settings → Taxes.
+   Abandoned-cart and order-confirmation copy is in `content/emails/`;
+   Shopify's notification editor has no API, so it is pasted in by hand.
+4. **SEO:** collection and page meta titles/descriptions are pushed by step
+   1; the homepage title and description are in `store/seo.json` for
+   Online Store → Preferences. Google and Meta pixels: install the Google &
+   YouTube and Facebook & Instagram apps, or give Claude the IDs. Welcome
+   pop-up: Shopify Forms (free), offer `WELCOME10`.
+5. **Test checkout** in Shopify Payments test mode (or Bogus Gateway), then
+   flip the store password off. Owner only; steps in the checklist.
 
 ## Part C — Things to decide (defaults in brackets, say nothing to accept)
 - Target market [United States, USD]

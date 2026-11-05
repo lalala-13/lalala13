@@ -1,136 +1,55 @@
 #!/usr/bin/env node
 // Pushes store/ and content/ into a Shopify store through the Admin GraphQL API.
 //
-//   SHOPIFY_STORE=xxxx.myshopify.com SHOPIFY_CLIENT_ID=... SHOPIFY_CLIENT_SECRET=... node scripts/push-store.mjs [--dry-run] [--only pages,policies,collections,menus]
+//   SHOPIFY_STORE=xxxx.myshopify.com SHOPIFY_CLIENT_ID=... SHOPIFY_CLIENT_SECRET=... \
+//     node scripts/push-store.mjs [--dry-run] [--only pages,policies,collections,menus,shipping,discount,theme]
 //
 // Auth: a Dev Dashboard app's client ID + secret (exchanged for a 24h token via the client credentials grant),
 // or a ready-made SHOPIFY_ADMIN_TOKEN from an older admin-created custom app.
 //
-// Idempotent: existing pages, collections and menus (matched by handle) are updated, not duplicated.
-// Theme colours/fonts/sections (store/theme-settings.json) are applied separately in the theme editor.
+// Idempotent: existing pages, collections, menus, shipping rates and discount codes (matched by handle / zone / code)
+// are updated, not duplicated. The theme step reads the live Dawn theme's JSON files, merges store/theme-settings.json
+// into them and writes them back, keeping a copy of the originals under .backup/theme/<timestamp>/.
+//
+// Other options:
+//   --render content/pages/faq.md      preview a Markdown file as HTML
+//   --theme-dir /path/to/dawn          with --dry-run: run the theme merge on a local Dawn copy, output to .backup/theme-preview/
 
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { ROOT, args, DRY, flag, opt, connect, gql, onlineStorePublicationId, inline, mdToHtml, frontMatter, plainText } from "./lib/shopify.mjs";
+import { THEME_FILES, buildThemeFiles } from "./lib/theme.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const API_VERSION = process.env.SHOPIFY_API_VERSION || "2025-07";
-const args = process.argv.slice(2);
-const DRY = args.includes("--dry-run");
 const onlyIdx = args.indexOf("--only");
 const ONLY = onlyIdx >= 0 ? new Set(args[onlyIdx + 1].split(",")) : null;
 const want = (step) => !ONLY || ONLY.has(step);
+const readJson = async (rel) => JSON.parse(await readFile(path.join(ROOT, rel), "utf8"));
+const seoFor = async () => (await readJson("store/seo.json"));
+const seoMetafields = (title, description) => [
+  { namespace: "global", key: "title_tag", type: "single_line_text_field", value: title },
+  { namespace: "global", key: "description_tag", type: "single_line_text_field", value: description },
+];
 
-const STORE = process.env.SHOPIFY_STORE;
-const { SHOPIFY_CLIENT_ID: CLIENT_ID, SHOPIFY_CLIENT_SECRET: CLIENT_SECRET } = process.env;
-let TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
-if (!DRY && !args.includes("--render")) {
-  if (!STORE || !(TOKEN || (CLIENT_ID && CLIENT_SECRET))) {
-    console.error("Set SHOPIFY_STORE plus SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET (or SHOPIFY_ADMIN_TOKEN), or pass --dry-run.");
-    process.exit(1);
-  }
-  if (!TOKEN) {
-    const res = await fetch(`https://${STORE}/admin/oauth/access_token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ grant_type: "client_credentials", client_id: CLIENT_ID, client_secret: CLIENT_SECRET }),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.access_token) {
-      console.error(`Token exchange failed (${res.status}): ${JSON.stringify(json)}`);
-      process.exit(1);
-    }
-    TOKEN = json.access_token;
-    console.log(`Got access token, scopes: ${json.scope}`);
-  }
-}
-
-async function gql(query, variables = {}) {
-  if (DRY) {
-    console.log(`  [dry-run] ${query.trim().split("\n")[0].trim()}`, JSON.stringify(variables).slice(0, 160));
-    return {};
-  }
-  const res = await fetch(`https://${STORE}/admin/api/${API_VERSION}/graphql.json`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": TOKEN },
-    body: JSON.stringify({ query, variables }),
-  });
-  const json = await res.json();
-  if (json.errors) throw new Error(JSON.stringify(json.errors));
-  const data = json.data;
-  for (const key of Object.keys(data || {})) {
-    const errs = data[key]?.userErrors;
-    if (errs?.length) throw new Error(`${key}: ${errs.map((e) => e.message).join("; ")}`);
-  }
-  return data;
-}
-
-// ---------- minimal Markdown -> HTML (covers what content/ uses) ----------
-function inline(s) {
-  return s
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/&lt;(https?:\/\/[^\s]+)&gt;/g, '<a href="$1">$1</a>')
-    .replace(/\b(support@bubblesharks\.com)\b/g, '<a href="mailto:$1">$1</a>');
-}
-function mdToHtml(md) {
-  const lines = md.replace(/\r/g, "").split("\n");
-  const out = [];
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    if (!line.trim()) { i++; continue; }
-    const h = line.match(/^(#{1,3})\s+(.*)/);
-    if (h) { out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); i++; continue; }
-    if (line.startsWith("|")) {
-      const rows = [];
-      while (i < lines.length && lines[i].startsWith("|")) { rows.push(lines[i]); i++; }
-      const cells = (r) => r.split("|").slice(1, -1).map((c) => c.trim());
-      const body = rows.filter((r) => !/^\|\s*-+/.test(r));
-      const [head, ...rest] = body;
-      const headCells = cells(head);
-      let html = "<table>";
-      if (headCells.some(Boolean)) html += `<thead><tr>${headCells.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead>`;
-      html += `<tbody>${rest.map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
-      out.push(html); continue;
-    }
-    const listMatch = (l) => l.match(/^(\s*)([-*]|\d+\.)\s+(.*)/);
-    if (listMatch(line)) {
-      const ordered = /^\s*\d+\./.test(line);
-      const items = [];
-      while (i < lines.length && (listMatch(lines[i]) || (lines[i].startsWith("  ") && items.length))) {
-        const m = listMatch(lines[i]);
-        if (m && !lines[i].startsWith("  ")) items.push(m[3]);
-        else items[items.length - 1] += " " + lines[i].trim().replace(/^[-*]\s+/, "");
-        i++;
-      }
-      const tag = ordered ? "ol" : "ul";
-      out.push(`<${tag}>${items.map((t) => `<li>${inline(t)}</li>`).join("")}</${tag}>`); continue;
-    }
-    const para = [];
-    while (i < lines.length && lines[i].trim() && !/^(#|\||\s*[-*]\s|\s*\d+\.\s)/.test(lines[i])) { para.push(lines[i].trim()); i++; }
-    out.push(`<p>${inline(para.join(" "))}</p>`);
-  }
-  return out.join("\n");
-}
-function frontMatter(md) {
-  const m = md.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!m) return { meta: {}, body: md };
-  const meta = Object.fromEntries(m[1].split("\n").map((l) => l.split(/:\s*/, 2)));
-  return { meta, body: m[2] };
+if (flag("--render")) { // preview a Markdown file as HTML: node scripts/push-store.mjs --render content/pages/faq.md
+  const md = await readFile(path.resolve(opt("--render")), "utf8");
+  console.log(mdToHtml(frontMatter(md).body));
+  process.exit(0);
 }
 
 // ---------- pages ----------
 async function pushPages() {
+  const seo = await seoFor();
   const dir = path.join(ROOT, "content/pages");
   for (const file of (await readdir(dir)).filter((f) => f.endsWith(".md"))) {
     const { meta, body } = frontMatter(await readFile(path.join(dir, file), "utf8"));
     const html = mdToHtml(body.replace(/^#\s.*\n/, "")); // title comes from front matter
-    const page = { title: meta.title, handle: meta.handle, body: html, isPublished: true, templateSuffix: meta.template || null };
+    const s = seo.pages[meta.handle] || {};
+    const page = { title: meta.title, handle: meta.handle, body: html, isPublished: true, templateSuffix: meta.template || null,
+      metafields: seoMetafields((s.title || meta.title) + seo.suffix, s.description || plainText(html)) };
     console.log(`page ${meta.handle}`);
     const found = DRY ? null : (await gql(`query($q:String){ pages(first:1, query:$q){ nodes{ id } } }`, { q: `handle:${meta.handle}` })).pages.nodes[0];
-    if (found) await gql(`mutation($id:ID!,$page:PageUpdateInput!){ pageUpdate(id:$id,page:$page){ page{id} userErrors{message} } }`, { id: found.id, page });
-    else await gql(`mutation($page:PageCreateInput!){ pageCreate(page:$page){ page{id} userErrors{message} } }`, { page });
+    if (found) await gql(`mutation($id:ID!,$page:PageUpdateInput!){ pageUpdate(id:$id,page:$page){ page{id} userErrors{field message} } }`, { id: found.id, page });
+    else await gql(`mutation($page:PageCreateInput!){ pageCreate(page:$page){ page{id} userErrors{field message} } }`, { page });
   }
 }
 
@@ -140,32 +59,30 @@ async function pushPolicies() {
   for (const [name, type] of Object.entries(POLICY_TYPES)) {
     const md = await readFile(path.join(ROOT, "content/policies", `${name}.md`), "utf8");
     console.log(`policy ${type}`);
-    await gql(`mutation($p:ShopPolicyInput!){ shopPolicyUpdate(shopPolicy:$p){ shopPolicy{id} userErrors{message} } }`,
+    await gql(`mutation($p:ShopPolicyInput!){ shopPolicyUpdate(shopPolicy:$p){ shopPolicy{id} userErrors{field message} } }`,
       { p: { type, body: mdToHtml(md.replace(/^#\s.*\n/, "")) } });
   }
 }
 
 // ---------- collections ----------
-async function onlineStorePublicationId() {
-  if (DRY) return "gid://shopify/Publication/DRY";
-  const d = await gql(`{ publications(first:20){ nodes{ id name } } }`);
-  return d.publications.nodes.find((p) => p.name === "Online Store")?.id;
-}
 async function pushCollections() {
-  const defs = JSON.parse(await readFile(path.join(ROOT, "store/collections.json"), "utf8"));
+  const defs = await readJson("store/collections.json");
+  const seo = await seoFor();
   const pubId = await onlineStorePublicationId();
   for (const c of defs) {
     const rule = c.rule
       ? { column: c.rule.column, relation: c.rule.relation, condition: c.rule.condition }
       : { column: "TAG", relation: "EQUALS", condition: c.tag };
+    const s = seo.collections[c.handle] || {};
     const input = { title: c.title, handle: c.handle, descriptionHtml: `<p>${inline(c.description)}</p>`,
-      ruleSet: { appliedDisjunctively: false, rules: [rule] } };
+      ruleSet: { appliedDisjunctively: false, rules: [rule] }, sortOrder: "BEST_SELLING",
+      seo: { title: (s.title || `${c.title} for Kids`) + seo.suffix, description: s.description || plainText(c.description) } };
     console.log(`collection ${c.handle}`);
     const found = DRY ? null : (await gql(`query($h:String!){ collectionByHandle(handle:$h){ id } }`, { h: c.handle })).collectionByHandle;
     let id = found?.id;
-    if (id) await gql(`mutation($i:CollectionInput!){ collectionUpdate(input:$i){ collection{id} userErrors{message} } }`, { i: { id, ...input } });
-    else id = (await gql(`mutation($i:CollectionInput!){ collectionCreate(input:$i){ collection{id} userErrors{message} } }`, { i: input })).collectionCreate?.collection?.id;
-    if (id && pubId) await gql(`mutation($id:ID!,$pub:ID!){ publishablePublish(id:$id,input:{publicationId:$pub}){ userErrors{message} } }`, { id, pub: pubId });
+    if (id) await gql(`mutation($i:CollectionInput!){ collectionUpdate(input:$i){ collection{id} userErrors{field message} } }`, { i: { id, ...input } });
+    else id = (await gql(`mutation($i:CollectionInput!){ collectionCreate(input:$i){ collection{id} userErrors{field message} } }`, { i: input })).collectionCreate?.collection?.id;
+    if (id && pubId) await gql(`mutation($id:ID!,$pub:ID!){ publishablePublish(id:$id,input:{publicationId:$pub}){ userErrors{field message} } }`, { id, pub: pubId });
   }
 }
 
@@ -174,27 +91,115 @@ function menuItems(items) {
   return items.map((it) => ({ title: it.title, type: "HTTP", url: it.url, items: it.items ? menuItems(it.items) : [] }));
 }
 async function pushMenus() {
-  const nav = JSON.parse(await readFile(path.join(ROOT, "store/navigation.json"), "utf8"));
+  const nav = await readJson("store/navigation.json");
   const existing = DRY ? [] : (await gql(`{ menus(first:20){ nodes{ id handle title } } }`)).menus.nodes;
   for (const [handle, items] of Object.entries(nav)) {
     const title = handle === "main-menu" ? "Main menu" : "Footer menu";
     console.log(`menu ${handle}`);
     const found = existing.find((m) => m.handle === handle);
-    if (found) await gql(`mutation($id:ID!,$t:String!,$items:[MenuItemUpdateInput!]!){ menuUpdate(id:$id,title:$t,items:$items){ menu{id} userErrors{message} } }`, { id: found.id, t: title, items: menuItems(items) });
-    else await gql(`mutation($t:String!,$h:String!,$items:[MenuItemCreateInput!]!){ menuCreate(title:$t,handle:$h,items:$items){ menu{id} userErrors{message} } }`, { t: title, h: handle, items: menuItems(items) });
+    if (found) await gql(`mutation($id:ID!,$t:String!,$items:[MenuItemUpdateInput!]!){ menuUpdate(id:$id,title:$t,items:$items){ menu{id} userErrors{field message} } }`, { id: found.id, t: title, items: menuItems(items) });
+    else await gql(`mutation($t:String!,$h:String!,$items:[MenuItemCreateInput!]!){ menuCreate(title:$t,handle:$h,items:$items){ menu{id} userErrors{field message} } }`, { t: title, h: handle, items: menuItems(items) });
   }
 }
 
-if (args.includes("--render")) { // preview a Markdown file as HTML: node scripts/push-store.mjs --render content/pages/faq.md
-  const md = await readFile(path.resolve(args[args.indexOf("--render") + 1]), "utf8");
-  console.log(mdToHtml(frontMatter(md).body));
-  process.exit(0);
+// ---------- shipping ----------
+// Default delivery profile → the zone that contains our country gets exactly the rates in store/shipping.json.
+async function pushShipping() {
+  const cfg = await readJson("store/shipping.json");
+  const money = (n) => ({ amount: n.toFixed(2), currencyCode: cfg.currency });
+  const methodDefinitionsToCreate = cfg.rates.map((r) => ({
+    name: r.name, active: true, rateDefinition: { price: money(r.price) },
+    priceConditionsToCreate: [
+      ...(r.minOrder !== undefined ? [{ criteria: money(r.minOrder), operator: "GREATER_THAN_OR_EQUAL_TO" }] : []),
+      ...(r.maxOrder !== undefined ? [{ criteria: money(r.maxOrder), operator: "LESS_THAN_OR_EQUAL_TO" }] : []),
+    ],
+  }));
+  console.log(`shipping: ${cfg.rates.map((r) => `${r.name} $${r.price}${r.minOrder !== undefined ? ` from $${r.minOrder}` : ""}${r.maxOrder !== undefined ? ` up to $${r.maxOrder}` : ""}`).join(" | ")}`);
+  if (DRY) { await gql(`mutation($id:ID!,$profile:DeliveryProfileInput!){ deliveryProfileUpdate(id:$id,profile:$profile){ profile{id} userErrors{field message} } }`, { id: "DRY", profile: { methodDefinitionsToCreate } }); return; }
+  const d = await gql(`{ deliveryProfiles(first:10){ nodes{ id name default profileLocationGroups{ locationGroup{ id }
+    locationGroupZones(first:20){ nodes{ zone{ id name countries{ code{ countryCode restOfWorld } } } methodDefinitions(first:20){ nodes{ id name active } } } } } } } }`);
+  const profiles = d.deliveryProfiles.nodes;
+  const profile = profiles.find((p) => p.default) || profiles[0];
+  if (!profile) throw new Error("No delivery profile found");
+  for (const p of profiles) if (p !== profile) console.log(`  note: extra delivery profile "${p.name}" (left untouched; supplier apps sometimes add their own rates)`);
+  const group = profile.profileLocationGroups[0];
+  if (!group) throw new Error("Default delivery profile has no location group; add a shipping location in Settings → Locations first");
+  const zone = group.locationGroupZones.nodes.find((z) => z.zone.countries.some((c) => cfg.zone.countries.includes(c.code.countryCode)));
+  const input = { locationGroupsToUpdate: [{ id: group.locationGroup.id }] };
+  if (zone) {
+    const old = zone.methodDefinitions.nodes;
+    console.log(`  zone "${zone.zone.name}": replacing ${old.length} rate(s) [${old.map((m) => m.name).join(", ")}]`);
+    input.methodDefinitionsToDelete = old.map((m) => m.id);
+    input.locationGroupsToUpdate[0].zonesToUpdate = [{ id: zone.zone.id, methodDefinitionsToCreate }];
+  } else {
+    console.log(`  creating zone "${cfg.zone.name}" (${cfg.zone.countries.join(", ")})`);
+    input.locationGroupsToUpdate[0].zonesToCreate = [{ name: cfg.zone.name, countries: cfg.zone.countries.map((code) => ({ code, includeAllProvinces: true })), methodDefinitionsToCreate }];
+  }
+  await gql(`mutation($id:ID!,$profile:DeliveryProfileInput!){ deliveryProfileUpdate(id:$id,profile:$profile){ profile{id} userErrors{field message} } }`, { id: profile.id, profile: input });
 }
 
-const steps = { pages: pushPages, policies: pushPolicies, collections: pushCollections, menus: pushMenus };
+// ---------- discount codes ----------
+async function pushDiscounts() {
+  const defs = await readJson("store/discounts.json");
+  for (const dsc of defs) {
+    const input = {
+      title: dsc.title, code: dsc.code, startsAt: new Date().toISOString(), appliesOncePerCustomer: !!dsc.oncePerCustomer,
+      customerSelection: { all: true }, customerGets: { value: { percentage: dsc.percentage / 100 }, items: { all: true } },
+      combinesWith: dsc.combinesWith,
+    };
+    console.log(`discount ${dsc.code} (${dsc.percentage}% off${dsc.oncePerCustomer ? ", once per customer" : ""})`);
+    const found = DRY ? null : (await gql(`query($c:String!){ codeDiscountNodeByCode(code:$c){ id } }`, { c: dsc.code })).codeDiscountNodeByCode;
+    if (found) { delete input.startsAt; await gql(`mutation($id:ID!,$d:DiscountCodeBasicInput!){ discountCodeBasicUpdate(id:$id,basicCodeDiscount:$d){ codeDiscountNode{id} userErrors{field message} } }`, { id: found.id, d: input }); }
+    else await gql(`mutation($d:DiscountCodeBasicInput!){ discountCodeBasicCreate(basicCodeDiscount:$d){ codeDiscountNode{id} userErrors{field message} } }`, { d: input });
+  }
+}
+
+// ---------- theme ----------
+async function pushTheme() {
+  const cfg = await readJson("store/theme-settings.json");
+  const themeDir = opt("--theme-dir");
+  let files = {};
+  let themeId;
+  if (DRY && themeDir) {
+    for (const f of THEME_FILES) files[f] = await readFile(path.join(themeDir, f), "utf8").catch(() => undefined);
+  } else if (DRY) {
+    console.log(`  [dry-run] would read ${THEME_FILES.join(", ")} from the live theme and merge store/theme-settings.json into them (pass --theme-dir <dawn checkout> to preview the merge)`);
+    return;
+  } else {
+    const themes = (await gql(`{ themes(first:20){ nodes{ id name role } } }`)).themes.nodes;
+    const main = themes.find((t) => t.role === "MAIN");
+    if (!main) throw new Error("No published (MAIN) theme found");
+    themeId = main.id;
+    const got = (await gql(`query($id:ID!,$names:[String!]!){ theme(id:$id){ files(filenames:$names, first:20){ nodes{ filename body{ ... on OnlineStoreThemeFileBodyText{ content } } } } } }`,
+      { id: themeId, names: THEME_FILES })).theme.files.nodes;
+    for (const n of got) files[n.filename] = n.body?.content;
+    const schema = files["config/settings_schema.json"] ? JSON.parse(files["config/settings_schema.json"]) : [];
+    const info = schema.find((g) => g.name === "theme_info");
+    console.log(`  theme "${main.name}" (${info?.theme_name || "?"} ${info?.theme_version || ""})`);
+    if (!/dawn/i.test(info?.theme_name || main.name)) { console.log("  not Dawn: skipping theme settings (the keys below are Dawn's). Apply store/theme-settings.json by hand in the theme editor."); return; }
+    if (!files["config/settings_data.json"]) throw new Error("Could not read config/settings_data.json from the theme");
+  }
+  const out = buildThemeFiles(files, cfg);
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const backupDir = path.join(ROOT, ".backup", DRY ? "theme-preview" : `theme/${stamp}`);
+  for (const [name, content] of Object.entries(out)) {
+    await mkdir(path.join(backupDir, path.dirname(name)), { recursive: true });
+    if (!DRY && files[name]) await writeFile(path.join(backupDir, name + ".orig"), files[name]);
+    if (DRY) await writeFile(path.join(backupDir, name), content);
+  }
+  console.log(DRY ? `  merged files written to ${path.relative(ROOT, backupDir)}/` : `  originals backed up to ${path.relative(ROOT, backupDir)}/`);
+  const upsert = Object.entries(out).map(([filename, value]) => ({ filename, body: { type: "TEXT", value } }));
+  const res = await gql(`mutation($id:ID!,$files:[OnlineStoreThemeFilesUpsertFileInput!]!){ themeFilesUpsert(themeId:$id, files:$files){ upsertedThemeFiles{ filename } userErrors{ field message filename code } } }`,
+    { id: themeId || "DRY", files: upsert });
+  if (!DRY) console.log(`  wrote ${res.themeFilesUpsert.upsertedThemeFiles.map((f) => f.filename).join(", ")}`);
+}
+
+await connect();
+const steps = { pages: pushPages, policies: pushPolicies, collections: pushCollections, menus: pushMenus, shipping: pushShipping, discount: pushDiscounts, theme: pushTheme };
+for (const name of ONLY || []) if (!steps[name]) { console.error(`Unknown step "${name}". Steps: ${Object.keys(steps).join(", ")}`); process.exit(1); }
 for (const [name, fn] of Object.entries(steps)) {
   if (!want(name)) continue;
   console.log(`\n== ${name} ==`);
   await fn();
 }
-console.log(DRY ? "\nDry run complete." : "\nDone. Apply store/theme-settings.json in Online Store → Themes → Customize.");
+console.log(DRY ? "\nDry run complete." : "\nDone. Next: docs/HANDOFF-CHECKLIST.md (homepage SEO, pixels, checkout settings, test order, password off).");

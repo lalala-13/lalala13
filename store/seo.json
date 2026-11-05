@@ -1,0 +1,20 @@
+{
+  "_readme": "Meta titles/descriptions. Collections and pages are pushed by scripts/push-store.mjs (overrides below win over the generated defaults). The homepage entry is not reachable through the API: paste it into Online Store → Preferences → Title and meta description.",
+  "suffix": " | Bubble Sharks",
+  "homepage": {
+    "title": "Bubble Sharks | Toys for Kids Aged 3–12, Big Fun, Little Prices",
+    "description": "Hand-picked bath, STEM, plush, sensory and outdoor toys for ages 3–12 with honest age grades. Free US shipping over $50, 30-day returns."
+  },
+  "collections": {
+    "bath-toys": { "title": "Bath Toys for Toddlers and Kids", "description": "Squirters, boats and bubble makers that make bath time the best ten minutes of the day. Honest age grades, free US shipping over $50." },
+    "stem-building": { "title": "STEM Toys and Building Kits for Kids", "description": "Blocks, marble runs, science and robot kits for ages 3–12 that sneak learning into play. Free US shipping over $50." },
+    "plush-cuddly": { "title": "Shark Plush and Cuddly Toys", "description": "Soft shark plush and ocean friends for bedtime and car rides. Honest age grades, 30-day returns." },
+    "under-15": { "title": "Kids' Toys Under $15", "description": "Pocket-money treats and party-bag heroes, all under $15. Free US shipping over $50." }
+  },
+  "pages": {
+    "about": { "title": "About Bubble Sharks", "description": "Why we started a small, hand-picked toy shop for ages 3–12, and what we promise on age grades, delivery and returns." },
+    "faq": { "title": "FAQ: Shipping, Returns and Toy Safety", "description": "Delivery times, where we ship, toy safety standards, returns and how to reach us." },
+    "contact": { "title": "Contact Bubble Sharks", "description": "Email support@bubblesharks.com or use the form. We answer within one business day." },
+    "shipping-returns": { "title": "Shipping and Returns", "description": "Free US shipping over $50, $4.95 flat under. 5–12 business day delivery with tracking and 30-day returns." }
+  }
+}

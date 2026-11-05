@@ -1,0 +1,9 @@
+{
+  "_readme": "Applied by scripts/push-store.mjs --only shipping to the store's default (General) delivery profile. Existing rates in the matching zone are replaced.",
+  "currency": "USD",
+  "zone": { "name": "United States", "countries": ["US"] },
+  "rates": [
+    { "name": "Standard shipping (5–12 business days)", "price": 4.95, "maxOrder": 49.99 },
+    { "name": "Free shipping (5–12 business days)", "price": 0, "minOrder": 50 }
+  ]
+}

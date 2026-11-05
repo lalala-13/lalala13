@@ -10,9 +10,24 @@ supplier app) and everything Claude does once it has API access.
 
 | Folder | What is in it |
 | --- | --- |
-| `docs/` | Owner setup guide and the hand-off checklist |
+| `docs/` | Owner setup guide (`SETUP-GUIDE.md`) and the launch hand-off checklist (`HANDOFF-CHECKLIST.md`) |
 | `brand/` | Brand kit: name, voice, colours, fonts, logo brief |
 | `content/pages/` | About, FAQ, Contact, Shipping & Returns page copy |
 | `content/policies/` | Privacy, Refund, Shipping and Terms policy drafts |
-| `store/` | Collections, navigation, theme settings, product sourcing rules |
-| `scripts/` | `push-store.mjs` pushes `store/` and `content/` to Shopify |
+| `content/emails/` | Abandoned-checkout and order-confirmation email copy (pasted into Shopify by hand) |
+| `store/` | Collections, navigation, theme settings, shipping rates, discount codes, SEO text, product sourcing rules and the 36-slot launch catalogue (`products.json`) |
+| `scripts/` | `push-store.mjs` pushes `store/` and `content/` to Shopify; `push-products.mjs` rewrites imported products to the catalogue and audits the store; `lib/` shared helpers |
+
+## Commands
+
+```bash
+node scripts/push-store.mjs --dry-run              # preview everything
+node scripts/push-store.mjs                        # pages, policies, collections, menus, shipping, discount, theme
+node scripts/push-store.mjs --only shipping,theme  # a subset
+node scripts/push-products.mjs --dry-run           # validate store/products.json against the sourcing rules
+node scripts/push-products.mjs                     # rewrite verified, matched products
+node scripts/push-products.mjs --audit             # list store products that break the rules
+```
+
+Needs Node 20+ and the `SHOPIFY_STORE`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`
+environment variables (or `SHOPIFY_ADMIN_TOKEN`). No npm install.
