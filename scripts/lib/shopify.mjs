@@ -143,7 +143,7 @@ export function mdToHtml(md) {
 export function frontMatter(md) {
   const m = md.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!m) return { meta: {}, body: md };
-  const meta = Object.fromEntries(m[1].split("\n").map((l) => l.split(/:\s*/, 2)));
+  const meta = Object.fromEntries(m[1].split("\n").map((l) => { const i = l.indexOf(":"); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }));
   return { meta, body: m[2] };
 }
 // Strips tags for plain-text fields such as meta descriptions; trims to `max` characters on a word boundary.

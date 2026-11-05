@@ -5,13 +5,28 @@ Companion to `SETUP-GUIDE.md`. Tick items top to bottom.
 
 ## 0. Status (2026-11-05, night)
 
-Live on `hd2ykn-1r.myshopify.com`, behind the store password: the four pages
-with meta titles, the 12 collections with SEO, both menus, US shipping
-($4.95 up to $49.99, free from $50), the `WELCOME10` code, the Age & safety
-product metafield, the Horizon theme branding (palette, Fredoka/Nunito,
-announcement bar, homepage, product-page tabs, footer) and **36 placeholder
-products**, one per catalogue slot, with the final copy, prices and tags so
-every collection and the homepage can be reviewed.
+Live on `hd2ykn-1r.myshopify.com`, behind the store password:
+
+- the four pages with meta titles, the 12 collections with SEO and an
+  illustrated image each, both menus (footer now links the Guides blog);
+- US shipping ($4.95 up to $49.99, free from $50) and the `WELCOME10` code;
+- the Horizon theme branding: palette, Fredoka/Nunito, logo and favicon,
+  announcement bar, illustrated hero banner, "shop by type" and "shop by
+  age" rows, New Arrivals and Under $15 rows, product-page Age & safety and
+  Shipping tabs, footer with help links and newsletter;
+- a branded password page ("Bubble Sharks is almost ready", email capture);
+- **36 placeholder products**, one per catalogue slot, with the final copy,
+  prices, tags, SEO, Age & safety text and a "photo coming soon" category
+  image, so every collection and the homepage can be reviewed;
+- the Guides blog with three launch posts (age grades, bath toys by age,
+  rainy-day STEM), each with a meta title and description.
+
+The brand images were generated from `scripts/make-images.mjs` (SVG →
+PNG) and pushed with `scripts/push-images.mjs`; the logo, favicon and hero
+live as media on an archived product called "Bubble Sharks brand assets",
+which is how they reached Files without the Files API scope. Do not delete
+that product; replace the images from Content → Files when you have
+designed ones.
 
 Placeholders are tagged `placeholder` and `slot:<slot>`, have no images and
 no supplier behind them. **Keep the store password on until each one is
@@ -116,14 +131,13 @@ collection and the homepage).
       offering 10% off with `WELCOME10`, show after 8 seconds, once per
       visitor. The homepage and footer newsletter blocks already collect
       emails without it.
-- [ ] **Theme editor (Online Store → Themes → Customize):** upload the logo
-      (brief in `brand/brand-kit.md`). The homepage opens with a solid
-      blue block instead of a photo; once you have a hero image, add a
-      Horizon "Hero" section above it and delete the blue block. Give each
-      collection an image (automated collections otherwise show their first
-      product's photo). The homepage's first product row shows New Arrivals;
-      once items carry the `bestseller` tag, switch it to Best Sellers in
-      `store/theme-settings.json` and re-run `--only theme`.
+- [ ] **Theme editor (Online Store → Themes → Customize):** look over the
+      homepage and a product page. The logo, favicon, hero banner and
+      collection images are first drafts from `brand/images/`; swap any of
+      them in Theme settings → Logo and favicon, or Content → Files, when
+      designed versions exist. The homepage's first product row shows New
+      Arrivals; once items carry the `bestseller` tag, switch it to Best
+      Sellers in `store/theme-settings.json` and re-run `--only theme`.
 - [ ] **Settings → Store details:** support email `support@bubblesharks.com`,
       forwarded to your Gmail; customer-facing email the same.
 

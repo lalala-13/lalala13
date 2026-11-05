@@ -1,38 +1,154 @@
 {
   "theme": "Horizon (Shopify default since 2025) or Dawn. scripts/push-store.mjs --only theme writes these into the live theme; other themes are skipped.",
   "colors": {
-    "background": "#F4FBFF", "text": "#0B2545", "button": "#0E6BA8",
-    "button_label": "#FFFFFF", "accent": "#FF6B57", "secondary_background": "#7FD1F5", "highlight": "#FFD166",
-    "sale_badge": "#FF6B57", "sold_out_badge": "#0B2545"
+    "background": "#F4FBFF",
+    "text": "#0B2545",
+    "button": "#0E6BA8",
+    "button_label": "#FFFFFF",
+    "accent": "#FF6B57",
+    "secondary_background": "#7FD1F5",
+    "highlight": "#FFD166",
+    "sale_badge": "#FF6B57",
+    "sold_out_badge": "#0B2545"
   },
-  "typography": { "heading_font": "fredoka_n7", "subheading_font": "nunito_n7", "body_font": "nunito_n4", "heading_scale": 110, "body_scale": 100 },
-  "layout": { "page_width": 1400, "border_radius": 16, "button_radius": 40, "card_style": "card", "card_image_padding": 8 },
-  "brand": { "headline": "Bubble Sharks", "description": "Big fun, little prices. Hand-picked toys for ages 3–12, shipped across the US." },
+  "typography": {
+    "heading_font": "fredoka_n7",
+    "subheading_font": "nunito_n7",
+    "body_font": "nunito_n4",
+    "heading_scale": 110,
+    "body_scale": 100
+  },
+  "layout": {
+    "page_width": 1400,
+    "border_radius": 16,
+    "button_radius": 40,
+    "card_style": "card",
+    "card_image_padding": 8
+  },
+  "brand": {
+    "headline": "Bubble Sharks",
+    "description": "Big fun, little prices. Hand-picked toys for ages 3–12, shipped across the US.",
+    "images": {
+      "logo": "shopify://shop_images/bs-logo.png",
+      "logo_inverse": "shopify://shop_images/bs-logo-inverse.png",
+      "favicon": "shopify://shop_images/bs-favicon.png",
+      "hero": "shopify://shop_images/bs-hero.png"
+    },
+    "images_note": "shopify://shop_images/<file> references. Filled by scripts/push-images.mjs after it uploads brand/ images; empty leaves the theme setting untouched."
+  },
   "announcement_bar": "Free US shipping over $50 · 30-day easy returns · Code WELCOME10 for 10% off",
   "homepage_sections": [
-    { "type": "image-banner", "heading": "Big fun, little prices.", "subheading": "Hand-picked toys for ages 3–12, delivered to your door.", "cta": { "label": "Shop all toys", "url": "/collections/all" } },
-    { "type": "collection-list", "heading": "Shop by type", "collections": ["bath-toys", "stem-building", "plush-cuddly", "sensory-fidget", "outdoor-water-play", "games-puzzles"] },
-    { "type": "featured-collection", "collection": "new-arrivals", "heading": "Fresh from the tank", "note": "Switch to best-sellers with heading 'Parents keep reordering these' once items carry the bestseller tag." },
-    { "type": "multicolumn", "heading": "Why Bubble Sharks", "columns": [
-      { "title": "Honest age grades", "text": "Every toy says who it is for." },
-      { "title": "Free shipping over $50", "text": "Flat $4.95 under, tracking always." },
-      { "title": "30-day returns", "text": "Change your mind, no drama." }
-    ]},
-    { "type": "featured-collection", "collection": "under-15", "heading": "Under $15" },
-    { "type": "newsletter", "heading": "Get 10% off your first order", "text": "New arrivals and rainy-day ideas, about twice a month." }
+    {
+      "type": "image-banner",
+      "heading": "Big fun, little prices.",
+      "subheading": "Hand-picked toys for ages 3–12, delivered to your door.",
+      "cta": {
+        "label": "Shop all toys",
+        "url": "/collections/all"
+      }
+    },
+    {
+      "type": "collection-list",
+      "heading": "Shop by type",
+      "collections": [
+        "bath-toys",
+        "stem-building",
+        "plush-cuddly",
+        "sensory-fidget",
+        "outdoor-water-play",
+        "games-puzzles"
+      ]
+    },
+    {
+      "type": "featured-collection",
+      "collection": "new-arrivals",
+      "heading": "Fresh from the tank",
+      "note": "Switch to best-sellers with heading 'Parents keep reordering these' once items carry the bestseller tag."
+    },
+    {
+      "type": "collection-list",
+      "heading": "Shop by age",
+      "collections": [
+        "ages-3-5",
+        "ages-6-8",
+        "ages-9-12"
+      ]
+    },
+    {
+      "type": "multicolumn",
+      "heading": "Why Bubble Sharks",
+      "columns": [
+        {
+          "title": "Honest age grades",
+          "text": "Every toy says who it is for."
+        },
+        {
+          "title": "Free shipping over $50",
+          "text": "Flat $4.95 under, tracking always."
+        },
+        {
+          "title": "30-day returns",
+          "text": "Change your mind, no drama."
+        }
+      ]
+    },
+    {
+      "type": "blog-posts",
+      "blog": "guides",
+      "heading": "Guides for grown-ups"
+    },
+    {
+      "type": "featured-collection",
+      "collection": "under-15",
+      "heading": "Under $15"
+    },
+    {
+      "type": "newsletter",
+      "heading": "Get 10% off your first order",
+      "text": "New arrivals and rainy-day ideas, about twice a month."
+    }
   ],
-  "product_page": { "show_vendor": false, "show_quantity": true, "show_share": false, "sticky_add_to_cart": true,
-    "blocks": ["title", "price", "rating", "variant_picker", "buy_buttons", "description", "collapsible:Age & safety", "collapsible:Shipping & returns"],
+  "product_page": {
+    "show_vendor": false,
+    "show_quantity": true,
+    "show_share": false,
+    "sticky_add_to_cart": true,
+    "blocks": [
+      "title",
+      "price",
+      "rating",
+      "variant_picker",
+      "buy_buttons",
+      "description",
+      "collapsible:Age & safety",
+      "collapsible:Shipping & returns"
+    ],
     "collapsibles": {
-      "Age & safety": { "icon": "check_mark", "source": "product.metafields.custom.age_safety" },
-      "Shipping & returns": { "icon": "truck", "content": "<p>Free US shipping on orders over $50, flat $4.95 under. Orders leave the warehouse in 1–3 business days and arrive 5–12 business days later with tracking. Changed your mind? 30-day returns, see the Refund policy in the footer.</p>" }
+      "Age & safety": {
+        "icon": "check_mark",
+        "source": "product.metafields.custom.age_safety"
+      },
+      "Shipping & returns": {
+        "icon": "truck",
+        "content": "<p>Free US shipping on orders over $50, flat $4.95 under. Orders leave the warehouse in 1–3 business days and arrive 5–12 business days later with tracking. Changed your mind? 30-day returns, see the Refund policy in the footer.</p>"
+      }
     }
   },
   "footer": {
     "links_heading": "Help",
     "about_heading": "Bubble Sharks",
-    "about_text": ["Big fun, little prices. Hand-picked toys for ages 3–12, shipped across the US.", "support@bubblesharks.com"],
+    "about_text": [
+      "Big fun, little prices. Hand-picked toys for ages 3–12, shipped across the US.",
+      "support@bubblesharks.com"
+    ],
     "newsletter_heading": "Get 10% off your first order"
   },
-  "checkout": { "note": "Checkout branding is not covered by the app scopes. Set in Settings → Checkout → Customize: logo centred, accent #0E6BA8, phone optional, tipping off." }
+  "checkout": {
+    "note": "Checkout branding is not covered by the app scopes. Set in Settings → Checkout → Customize: logo centred, accent #0E6BA8, phone optional, tipping off."
+  },
+  "password_page": {
+    "heading": "Bubble Sharks is almost ready",
+    "text": "Big fun, little prices. Hand-picked toys for ages 3–12, shipping across the US soon. Leave your email and get 10% off your first order on launch day.",
+    "button": "Notify me"
+  }
 }

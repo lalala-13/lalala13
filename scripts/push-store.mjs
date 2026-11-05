@@ -2,7 +2,7 @@
 // Pushes store/ and content/ into a Shopify store through the Admin GraphQL API.
 //
 //   SHOPIFY_STORE=xxxx.myshopify.com SHOPIFY_CLIENT_ID=... SHOPIFY_CLIENT_SECRET=... \
-//     node scripts/push-store.mjs [--dry-run] [--only pages,policies,collections,menus,shipping,discount,theme]
+//     node scripts/push-store.mjs [--dry-run] [--only pages,policies,collections,menus,shipping,discount,theme,blog]
 //
 // Auth: a Dev Dashboard app's client ID + secret (exchanged for a 24h token via the client credentials grant),
 // or a ready-made SHOPIFY_ADMIN_TOKEN from an older admin-created custom app.
@@ -161,6 +161,38 @@ async function pushDiscounts() {
   }
 }
 
+// ---------- blog ----------
+// content/blog/*.md → articles in the "Guides" blog (created if missing), matched by handle, with meta title/description.
+const BLOG = { title: "Guides", handle: "guides" };
+async function pushBlog() {
+  const dir = path.join(ROOT, "content/blog");
+  const posts = (await readdir(dir).catch(() => [])).filter((f) => f.endsWith(".md"));
+  if (!posts.length) { console.log("  no posts in content/blog"); return; }
+  const seo = await seoFor();
+  let blog = DRY ? { id: "gid://shopify/Blog/DRY" } : (await gql(`{ blogs(first:20){ nodes{ id handle title } } }`)).blogs.nodes.find((b) => b.handle === BLOG.handle);
+  if (!blog) {
+    console.log(`blog ${BLOG.handle} (create)`);
+    blog = (await gql(`mutation($b:BlogCreateInput!){ blogCreate(blog:$b){ blog{ id handle } userErrors{ field message } } }`, { b: { title: BLOG.title, handle: BLOG.handle, commentPolicy: "CLOSED" } })).blogCreate.blog;
+  }
+  const existing = DRY ? [] : (await gql(`query($id:ID!){ blog(id:$id){ articles(first:50){ nodes{ id handle image { url } } } } }`, { id: blog.id })).blog.articles.nodes;
+  for (const file of posts) {
+    const { meta, body } = frontMatter(await readFile(path.join(dir, file), "utf8"));
+    const html = mdToHtml(body.replace(/^#\s.*\n/, ""));
+    const titleTag = (meta.title + seo.suffix).length <= 70 ? meta.title + seo.suffix : meta.title;
+    const article = { title: meta.title, handle: meta.handle, body: html, summary: `<p>${inline(meta.summary || "")}</p>`, author: { name: meta.author || "Bubble Sharks" },
+      isPublished: true, tags: (meta.tags || "").split(",").map((t) => t.trim()).filter(Boolean),
+      metafields: seoMetafields(titleTag, plainText(meta.summary || html)) };
+    const found = existing.find((a) => a.handle === meta.handle);
+    if (meta.image && !found?.image && !DRY) { // `image: <collection handle>` borrows that collection's image for the post card
+      const col = (await gql(`query($h:String!){ collectionByHandle(handle:$h){ image { url altText } } }`, { h: meta.image })).collectionByHandle;
+      if (col?.image?.url) article.image = { url: col.image.url, altText: col.image.altText || meta.title };
+    }
+    console.log(`article ${meta.handle}`);
+    if (found) await gql(`mutation($id:ID!,$a:ArticleUpdateInput!){ articleUpdate(id:$id, article:$a){ article{ id } userErrors{ field message } } }`, { id: found.id, a: article });
+    else await gql(`mutation($a:ArticleCreateInput!){ articleCreate(article:$a){ article{ id } userErrors{ field message } } }`, { a: { ...article, blogId: blog.id } });
+  }
+}
+
 // ---------- theme ----------
 // Supports Dawn and Horizon (Shopify's two free defaults). Reads the live theme's JSON, merges store/theme-settings.json, writes back.
 const THEMES = { dawn: { files: THEME_FILES, build: buildThemeFiles }, horizon: { files: HORIZON_FILES, build: buildHorizonFiles } };
@@ -210,7 +242,7 @@ async function pushTheme() {
 }
 
 await connect();
-const steps = { pages: pushPages, policies: pushPolicies, collections: pushCollections, menus: pushMenus, shipping: pushShipping, discount: pushDiscounts, theme: pushTheme };
+const steps = { pages: pushPages, policies: pushPolicies, collections: pushCollections, menus: pushMenus, shipping: pushShipping, discount: pushDiscounts, theme: pushTheme, blog: pushBlog };
 for (const name of ONLY || []) if (!steps[name]) { console.error(`Unknown step "${name}". Steps: ${Object.keys(steps).join(", ")}`); process.exit(1); }
 for (const [name, fn] of Object.entries(steps)) {
   if (!want(name)) continue;

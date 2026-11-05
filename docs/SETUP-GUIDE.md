@@ -77,8 +77,10 @@ try again. `invalid_client` means the Client ID or secret was copied wrong.
 
 Status on 2026-11-05: the app is installed and steps 1 and 2 have run.
 Pages, collections, menus, shipping, the discount code, the theme branding
-and 36 placeholder products (final copy and prices, no supplier yet) are
-live behind the store password. Policies wait for the owner to switch off
+with generated logo, favicon, hero and collection images, a branded
+password page, three blog guides and 36 placeholder products (final copy,
+prices and category images, no supplier yet) are live behind the store
+password. Policies wait for the owner to switch off
 Shopify's automatic policy management (Settings → Policies); real products
 wait for the supplier import, which replaces the placeholders slot by slot.
 The ordered checklist, including the few admin screens that have no API, is

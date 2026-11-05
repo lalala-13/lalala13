@@ -4,7 +4,7 @@
 
 export const HORIZON_FILES = [
   "config/settings_schema.json", "config/settings_data.json", "templates/index.json", "templates/product.json",
-  "sections/header-group.json", "sections/footer-group.json",
+  "sections/header-group.json", "sections/footer-group.json", "templates/password.json",
 ];
 
 const strip = (s) => s.replace(/^\s*\/\*[\s\S]*?\*\/\s*/, ""); // Horizon files start with an auto-generated comment
@@ -71,6 +71,11 @@ export function mergeSettingsData(json, schemaJson, cfg) {
     card_corner_radius: clamp(r, "card_corner_radius", cfg.layout.border_radius), product_corner_radius: clamp(r, "product_corner_radius", cfg.layout.border_radius),
     variant_button_radius: clamp(r, "variant_button_radius", 100), cart_type: "drawer", show_add_discount_code: true,
   });
+  // Images live in Files; references look like shopify://shop_images/<filename>. Empty keeps whatever is set.
+  const img = cfg.brand?.images || {};
+  if (img.logo) { current.logo = img.logo; current.logo_height = 44; current.logo_height_mobile = 32; }
+  if (img.logo_inverse) current.logo_inverse = img.logo_inverse;
+  if (img.favicon) current.favicon = img.favicon;
   data.current = current;
   return JSON.stringify(data, null, 2);
 }
@@ -86,7 +91,22 @@ export function buildIndex(json, cfg) {
   const add = (key, s) => { sections[key] = s; order.push(key); };
   cfg.homepage_sections.forEach((s, i) => {
     const key = `${s.type.replace(/-/g, "_")}_${i + 1}`;
-    if (s.type === "image-banner") { // solid brand-colour hero until the owner uploads a photo (Horizon's hero shows a placeholder image otherwise)
+    if (s.type === "image-banner" && cfg.brand?.images?.hero) { // Horizon hero with the brand banner behind white text
+      add(key, {
+        type: "hero",
+        blocks: {
+          heading: text(`<h1>${esc(s.heading)}</h1>`, { preset: "h1", align: "center", width: "100%", color: WHITE, max: "narrow" }),
+          sub: text(`<p>${esc(s.subheading)}</p>`, { preset: "paragraph", align: "center", width: "100%", color: WHITE, max: "narrow", padEnd: 8 }),
+          cta: button(s.cta.label, s.cta.url, { bg: c.highlight, fg: c.text }),
+        },
+        block_order: ["heading", "sub", "cta"],
+        settings: { media_type_1: "image", image_1: cfg.brand.images.hero, media_type_2: "image", stack_media_on_mobile: false, custom_mobile_media: false, media_type_1_mobile: "image", media_type_2_mobile: "image",
+          link: "", open_in_new_tab: false, content_direction: "column", vertical_on_mobile: true, horizontal_alignment: "center", vertical_alignment: "center", align_baseline: false,
+          horizontal_alignment_flex_direction_column: "center", vertical_alignment_flex_direction_column: "center", gap: 20, section_width: "full-width", section_height: "large", section_height_custom: 50,
+          background_color: c.button, toggle_overlay: true, overlay_color: "#0B254540", overlay_style: "gradient", gradient_direction: "to top", blurred_reflection: false, reflection_opacity: 75,
+          "padding-block-start": 64, "padding-block-end": 64 },
+      });
+    } else if (s.type === "image-banner") { // solid brand-colour hero until the owner uploads a photo (Horizon's hero shows a placeholder image otherwise)
       add(key, section({
         heading: text(`<h1>${esc(s.heading)}</h1>`, { preset: "h1", align: "center", width: "100%", color: WHITE, max: "narrow" }),
         sub: text(`<p>${esc(s.subheading)}</p>`, { preset: "paragraph", align: "center", width: "100%", color: WHITE, max: "narrow", padEnd: 8 }),
@@ -127,6 +147,21 @@ export function buildIndex(json, cfg) {
         title: text(`<h2>${esc(s.heading)}</h2>`, { preset: "h3", align: "center", padEnd: 8 }),
         columns: group(cols, { direction: "row", align: "center", gap: 16 }),
       }, { align: "center", gap: 16, bg: c.secondary_background, padTop: 48, padBottom: 48 }));
+    } else if (s.type === "blog-posts") {
+      add(key, {
+        type: "featured-blog-posts",
+        blocks: {
+          "static-blog-title": { type: "_featured-blog-posts-title", static: true, settings: { text: `<h2>${esc(s.heading)}</h2>`, type_preset: "h3" } },
+          "static-blog-post-card": { type: "_featured-blog-posts-card", static: true, settings: {}, blocks: {
+            title: { type: "_heading", static: true, settings: { text: "<h4>{{ closest.article.title }}</h4>", show_alignment: false } },
+            "blog-post-info-text": { type: "_blog-post-info-text", static: true, settings: { "padding-block-start": 0, "padding-block-end": 0, show_alignment: false } },
+            "blog-post-description": { type: "_blog-post-description", static: true, settings: { "padding-block-start": 8, "padding-block-end": 0 } },
+          } },
+        },
+        block_order: [],
+        settings: { blog: s.blog, layout_type: "grid", carousel_on_mobile: false, post_limit: 3, columns: 3, mobile_columns: "1", mobile_card_size: "60cqw", columns_gap: 12, rows_gap: 12,
+          icons_style: "arrow", icons_shape: "none", section_width: "page-width", gap: 12, background_color: "", "padding-block-start": 48, "padding-block-end": 48 },
+      });
     } else if (s.type === "newsletter") {
       add(key, section({
         title: text(`<h2>${esc(s.heading)}</h2>`, { preset: "h3", align: "center" }),
@@ -216,8 +251,27 @@ export function mergeFooterGroup(json, cfg) {
   return JSON.stringify(g, null, 2);
 }
 
+// ---------- templates/password.json (what visitors see until launch) ----------
+export function mergePassword(json, cfg) {
+  const t = parse(json, null);
+  if (!t) return null;
+  const main = Object.values(t.sections).find((s) => s.type === "password");
+  if (!main) return null;
+  const pw = cfg.password_page || {};
+  for (const b of Object.values(main.blocks || {})) {
+    if (b.type === "text" && /<h1>/.test(b.settings?.text || "")) { b.settings.text = `<h1>${esc(pw.heading || "Opening soon")}</h1>`; b.settings.alignment = "center"; b.settings.width = "100%"; }
+    else if (b.type === "text") { b.settings.text = `<p>${esc(pw.text || "")}</p>`; b.settings.alignment = "center"; b.settings.width = "100%"; }
+    else if (b.type === "logo") { b.settings.unit = "pixel"; b.settings.pixel_height = 72; b.settings.pixel_height_mobile = 48; b.settings.custom_mobile_size = true; b.settings.unit_mobile = "pixel"; }
+    else if (b.type === "email-signup") { b.settings.label = pw.button || "Notify me"; b.settings.border_radius = 100; }
+  }
+  main.settings = { ...main.settings, background_color: cfg.colors.background };
+  return JSON.stringify(t, null, 2);
+}
+
 export function buildHorizonFiles(files, cfg) {
+  const password = mergePassword(files["templates/password.json"], cfg);
   return {
+    ...(password ? { "templates/password.json": password } : {}),
     "config/settings_data.json": mergeSettingsData(files["config/settings_data.json"], files["config/settings_schema.json"], cfg),
     "templates/index.json": buildIndex(files["templates/index.json"], cfg),
     "templates/product.json": mergeProduct(files["templates/product.json"], cfg),
