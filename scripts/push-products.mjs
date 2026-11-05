@@ -2,7 +2,12 @@
 // Rewrites supplier-imported products to the listing rules in store/product-sourcing-rules.md, driven by store/products.json.
 //
 //   node scripts/push-products.mjs [--dry-run] [--slot bath-01,plush-01]   rewrite verified, matched slots
+//   node scripts/push-products.mjs --create-placeholders                    create a placeholder product for every slot with no product yet
 //   node scripts/push-products.mjs --audit                                  check every store product against the rules
+//
+// Placeholders carry the tags `placeholder` and `slot:<slot>`. They let the storefront be reviewed before the supplier
+// import and are archived automatically when a real product for the same slot is rewritten. The audit lists them;
+// none may be live at launch.
 //
 // A slot is pushed only when `verified: true` (age grade, materials, box contents and safety docs checked against the
 // supplier listing) and a store product matches it by `match.handle` or `match.titleIncludes`. Everything else is reported.
@@ -74,10 +79,32 @@ const tagsFor = (p, existing = []) => [...new Set([p.collection, p.age, ...(p.ex
 const PRODUCT_FIELDS = `id handle title status tags productType vendor descriptionHtml variants(first:50){ nodes{ id price title } } ageSafety: metafield(namespace:"${META.namespace}", key:"${META.key}"){ id }`;
 const fetchProducts = () => paginate(`query($first:Int!,$after:String){ products(first:$first, after:$after){ nodes{ ${PRODUCT_FIELDS} } pageInfo{ hasNextPage endCursor } } }`, {}, (d) => d.products);
 
+const isPlaceholder = (x) => (x.tags || []).includes("placeholder");
 function findMatch(p, products) {
-  if (p.match?.handle) return products.filter((x) => x.handle === p.match.handle);
-  if (p.match?.titleIncludes) { const needle = p.match.titleIncludes.toLowerCase(); return products.filter((x) => x.title.toLowerCase().includes(needle)); }
+  const real = products.filter((x) => !isPlaceholder(x));
+  if (p.match?.handle) return real.filter((x) => x.handle === p.match.handle);
+  if (p.match?.titleIncludes) { const needle = p.match.titleIncludes.toLowerCase(); return real.filter((x) => x.title.toLowerCase().includes(needle)); }
   return [];
+}
+const findPlaceholder = (p, products) => products.find((x) => isPlaceholder(x) && (x.tags || []).includes(`slot:${p.slot}`));
+
+async function createPlaceholder(p, pubId) {
+  const input = {
+    title: p.title, descriptionHtml: descriptionHtml(p), tags: [...tagsFor(p), "placeholder", `slot:${p.slot}`], productType: p.type,
+    vendor: catalogue.defaults.vendor, status: "ACTIVE",
+    seo: { title: plainText(p.title + SEO_SUFFIX, 70), description: plainText(p.lead, 160) },
+    metafields: [{ namespace: META.namespace, key: META.key, type: META.type, value: ageSafety(p) }],
+  };
+  const d = await gql(`mutation($p:ProductCreateInput!){ productCreate(product:$p){ product{ id handle variants(first:1){ nodes{ id } } } userErrors{ field message } } }`, { p: input });
+  const product = d.productCreate.product;
+  const variant = product.variants.nodes[0];
+  if (variant) await gql(`mutation($id:ID!,$v:[ProductVariantsBulkInput!]!){ productVariantsBulkUpdate(productId:$id, variants:$v){ productVariants{ id } userErrors{ field message } } }`,
+    { id: product.id, v: [{ id: variant.id, price: p.price.toFixed(2) }] });
+  if (pubId) await gql(`mutation($id:ID!,$pub:ID!){ publishablePublish(id:$id,input:{publicationId:$pub}){ userErrors{ field message } } }`, { id: product.id, pub: pubId });
+  return product;
+}
+async function archive(product) {
+  await gql(`mutation($p:ProductUpdateInput!){ productUpdate(product:$p){ product{ id } userErrors{ field message } } }`, { p: { id: product.id, status: "ARCHIVED" } });
 }
 
 async function ensureMetafieldDefinition() {
@@ -112,6 +139,7 @@ function auditProduct(x) {
   if (!x.ageSafety) issues.push("no Age & safety metafield");
   if (!x.productType) issues.push("no product type");
   if (x.status !== "ACTIVE") issues.push(`status ${x.status}`);
+  if (isPlaceholder(x) && x.status === "ACTIVE") issues.push("placeholder, not linked to a supplier: import the real product and re-run, or archive it before launch");
   return issues;
 }
 
@@ -142,19 +170,27 @@ if (flag("--audit")) {
 
 if (!DRY) await ensureMetafieldDefinition();
 const pubId = await onlineStorePublicationId();
-const report = { pushed: [], unverified: [], missing: [], ambiguous: [] };
+const CREATE = flag("--create-placeholders");
+const report = { pushed: [], unverified: [], missing: [], ambiguous: [], created: [], archived: [] };
 for (const p of slots) {
   const matches = findMatch(p, products);
-  if (DRY) { console.log(`  [dry-run] ${p.slot} → "${p.title}" $${p.price} tags=${tagsFor(p).join(",")}${p.verified ? "" : " (unverified: would skip)"}`); continue; }
-  if (matches.length === 0) { report.missing.push(p); continue; }
+  const placeholder = findPlaceholder(p, products);
+  if (DRY) { console.log(`  [dry-run] ${p.slot} → "${p.title}" $${p.price} tags=${tagsFor(p).join(",")}${p.verified ? "" : " (unverified: would skip)"}${CREATE ? " (would create placeholder if missing)" : ""}`); continue; }
+  if (matches.length === 0) {
+    if (CREATE && !placeholder) { const x = await createPlaceholder(p, pubId); console.log(`  ${p.slot} placeholder created: ${x.handle}`); report.created.push(p); }
+    else if (CREATE && placeholder?.status === "ACTIVE") console.log(`  ${p.slot} placeholder exists: ${placeholder.handle}`);
+    else report.missing.push(p);
+    continue;
+  }
   if (matches.length > 1) { report.ambiguous.push([p, matches]); continue; }
   if (!p.verified) { report.unverified.push([p, matches[0]]); continue; }
   console.log(`  ${p.slot} → ${matches[0].handle}: "${p.title}" $${p.price}`);
   await rewrite(p, matches[0], pubId);
   report.pushed.push(p);
+  if (placeholder && placeholder.status !== "ARCHIVED") { await archive(placeholder); console.log(`    archived placeholder ${placeholder.handle}`); report.archived.push(placeholder); }
 }
 if (!DRY) {
-  console.log(`\n== result ==\n  rewritten: ${report.pushed.length}`);
+  console.log(`\n== result ==\n  rewritten: ${report.pushed.length}, placeholders created: ${report.created.length}, placeholders archived: ${report.archived.length}`);
   for (const [p, x] of report.unverified) console.log(`  skipped (set verified:true after checking the supplier listing): ${p.slot} ↔ ${x.handle}`);
   for (const [p, xs] of report.ambiguous) console.log(`  ambiguous (set match.handle): ${p.slot} ↔ ${xs.map((x) => x.handle).join(", ")}`);
   for (const p of report.missing) console.log(`  not imported yet: ${p.slot}  (search: "${p.supplier.search}")`);

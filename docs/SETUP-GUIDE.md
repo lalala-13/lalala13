@@ -75,12 +75,14 @@ try again. `invalid_client` means the Client ID or secret was copied wrong.
 
 ## Part B — What Claude does next (no action from you)
 
-Status on 2026-11-05: the app is installed and step 1 has run. Pages,
-collections, menus, shipping, the discount code and the theme branding are
-live. Policies wait for the owner to switch off Shopify's automatic policy
-management (Settings → Policies); products wait for the supplier import. The
-ordered checklist, including the few admin screens that have no API, is in
-[`HANDOFF-CHECKLIST.md`](HANDOFF-CHECKLIST.md).
+Status on 2026-11-05: the app is installed and steps 1 and 2 have run.
+Pages, collections, menus, shipping, the discount code, the theme branding
+and 36 placeholder products (final copy and prices, no supplier yet) are
+live behind the store password. Policies wait for the owner to switch off
+Shopify's automatic policy management (Settings → Policies); real products
+wait for the supplier import, which replaces the placeholders slot by slot.
+The ordered checklist, including the few admin screens that have no API, is
+in [`HANDOFF-CHECKLIST.md`](HANDOFF-CHECKLIST.md).
 
 1. **Store skeleton, one command:** `node scripts/push-store.mjs` pushes pages
    and their meta titles, policies, the 12 collections, both menus, US
@@ -91,9 +93,10 @@ ordered checklist, including the few admin screens that have no API, is in
 2. **Products:** `store/products.json` is the launch catalogue, 36 slots
    written to the sourcing rules (titles, prices, tags, descriptions, age and
    safety text, what to search for in Zendrop and the landed cost each price
-   supports). Importing from the supplier app needs your login; after that
-   `node scripts/push-products.mjs` rewrites each verified product and
-   `--audit` checks the whole store against the rules.
+   supports). `--create-placeholders` put one placeholder product per slot
+   in the store. Importing from the supplier app needs your login; after
+   that `node scripts/push-products.mjs` rewrites each verified product,
+   archives its placeholder, and `--audit` checks the whole store.
 3. **Shipping and the discount code** are covered by step 1. Taxes are
    automatic on new US stores; confirm the state in Settings → Taxes.
    Abandoned-cart and order-confirmation copy is in `content/emails/`;

@@ -44,3 +44,7 @@ or commission one on Fiverr for about $30–60.
 Bright, white or Foam backgrounds, toy in use by a child's hands, no faces
 needed. Supplier photos are fine for launch; replace hero images with
 lifestyle shots in month two.
+
+## Logo files
+- `brand/logo.svg`: first draft of the brief above (shark, bubbles, wordmark). Upload in Online Store → Themes → Customize → Theme settings → Logo, or hand it to a designer as the reference.
+- `brand/favicon.svg`: square shark head for Theme settings → Favicon (Shopify also accepts a 32×32 PNG export of it).

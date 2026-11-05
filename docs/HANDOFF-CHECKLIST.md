@@ -3,13 +3,21 @@
 What is automated, what the owner still has to click, and in which order.
 Companion to `SETUP-GUIDE.md`. Tick items top to bottom.
 
-## 0. Status (2026-11-05, evening)
+## 0. Status (2026-11-05, night)
 
-Live on `hd2ykn-1r.myshopify.com`: the four pages with meta titles, the 12
-collections with SEO, both menus, US shipping ($4.95 up to $49.99, free from
-$50), the `WELCOME10` code, the Age & safety product metafield, and the
-Horizon theme branding. Not yet: policies (see 1), products (see 3), the
-admin-only settings (see 4), the test order and launch (5, 6).
+Live on `hd2ykn-1r.myshopify.com`, behind the store password: the four pages
+with meta titles, the 12 collections with SEO, both menus, US shipping
+($4.95 up to $49.99, free from $50), the `WELCOME10` code, the Age & safety
+product metafield, the Horizon theme branding (palette, Fredoka/Nunito,
+announcement bar, homepage, product-page tabs, footer) and **36 placeholder
+products**, one per catalogue slot, with the final copy, prices and tags so
+every collection and the homepage can be reviewed.
+
+Placeholders are tagged `placeholder` and `slot:<slot>`, have no images and
+no supplier behind them. **Keep the store password on until each one is
+replaced** (section 3): when a real supplier product for a slot is rewritten,
+the script archives the placeholder itself. Not yet: policies (1), the
+admin-only settings (4), the test order and launch (5, 6).
 
 ## 1. Policies and store name (owner, 3 minutes)
 
@@ -58,11 +66,12 @@ The theme step edits the live theme's JSON files and keeps the originals in
 written). Each slot names what to search for in Zendrop and the highest landed
 cost that keeps the price inside 2.5–3× with a $6 margin after fees.
 
-Per slot:
+Per slot (the placeholder product in the store shows the finished listing):
 - [ ] Search the supplier app with `supplier.search`; keep only a listing that
       passes every **Must** rule (age grade, US safety docs, ≤ 12 business
       days shipping with tracking, supplier rating, no licensed characters,
-      4+ photos). Import it to the store.
+      4+ photos). Import it to the store. It arrives as a second product with
+      the supplier's title; leave the placeholder alone.
 - [ ] In `store/products.json` fill `match.handle`, `supplier.landedCost` and
       `safetyDocs`; correct `ageLabel`, `materials`, `inTheBox` and the
       supervision note if the supplier page says otherwise; set
@@ -70,10 +79,12 @@ Per slot:
       `price` to the next x.95 (the script tells you).
 - [ ] `node scripts/push-products.mjs` rewrites every verified, matched product
       (title, description, tags, type, price on all variants, SEO, the
-      Age & safety tab) and publishes it. Unverified or unmatched slots are
-      listed, nothing else is touched.
+      Age & safety tab), publishes it and archives that slot's placeholder.
+      Unverified or unmatched slots are listed, nothing else is touched.
 - [ ] `node scripts/push-products.mjs --audit` lists any store product that
-      breaks the rules (missing tags, odd prices, no Age & safety).
+      breaks the rules (missing tags, odd prices, no Age & safety) and every
+      placeholder still live. It must list no placeholders before launch.
+      A slot you decide not to stock: archive its placeholder in the admin.
 
 Claude can do the JSON edits and both commands; only the supplier-app browsing
 and import need the owner's login. Products carry the `new` tag at launch; add
@@ -110,7 +121,9 @@ collection and the homepage).
       blue block instead of a photo; once you have a hero image, add a
       Horizon "Hero" section above it and delete the blue block. Give each
       collection an image (automated collections otherwise show their first
-      product's photo).
+      product's photo). The homepage's first product row shows New Arrivals;
+      once items carry the `bestseller` tag, switch it to Best Sellers in
+      `store/theme-settings.json` and re-run `--only theme`.
 - [ ] **Settings → Store details:** support email `support@bubblesharks.com`,
       forwarded to your Gmail; customer-facing email the same.
 

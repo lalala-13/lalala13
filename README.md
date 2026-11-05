@@ -25,8 +25,9 @@ node scripts/push-store.mjs --dry-run              # preview everything
 node scripts/push-store.mjs                        # pages, policies, collections, menus, shipping, discount, theme
 node scripts/push-store.mjs --only shipping,theme  # a subset
 node scripts/push-products.mjs --dry-run           # validate store/products.json against the sourcing rules
-node scripts/push-products.mjs                     # rewrite verified, matched products
-node scripts/push-products.mjs --audit             # list store products that break the rules
+node scripts/push-products.mjs --create-placeholders  # one placeholder product per slot that has none yet
+node scripts/push-products.mjs                     # rewrite verified, matched products, archive their placeholders
+node scripts/push-products.mjs --audit             # list store products that break the rules or are placeholders
 ```
 
 Needs Node 20+ and the `SHOPIFY_STORE`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`

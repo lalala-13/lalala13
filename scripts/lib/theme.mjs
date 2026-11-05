@@ -141,7 +141,7 @@ export function mergeProduct(json, cfg) {
       const heading = b.slice("collapsible:".length);
       const c = pp.collapsibles?.[heading] || {};
       const key = `collapsible_${Object.keys(blocks).filter((k) => k.startsWith("collapsible_")).length + 1}`;
-      blocks[key] = { type: "collapsible_tab", settings: { heading, icon: c.icon || "check_mark", content: c.source ? `{{ ${c.source} }}` : c.content || "", page: "" } };
+      blocks[key] = { type: "collapsible_tab", settings: { heading, icon: c.icon || "check_mark", content: c.source ? `<p>{{ ${c.source}.value }}</p>` : c.content || "", page: "" } };
     } else if (b === "variant_picker") blocks[b] = { type: b, settings: { picker_type: "button", swatch_shape: "circle" } };
     else if (b === "buy_buttons") blocks[b] = { type: b, settings: { show_dynamic_checkout: true, show_gift_card_recipient: false } };
     else if (b === "share") { if (pp.show_share) blocks[b] = { type: b, settings: { share_label: "Share" } }; }

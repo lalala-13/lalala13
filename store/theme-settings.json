@@ -12,7 +12,7 @@
   "homepage_sections": [
     { "type": "image-banner", "heading": "Big fun, little prices.", "subheading": "Hand-picked toys for ages 3–12, delivered to your door.", "cta": { "label": "Shop all toys", "url": "/collections/all" } },
     { "type": "collection-list", "heading": "Shop by type", "collections": ["bath-toys", "stem-building", "plush-cuddly", "sensory-fidget", "outdoor-water-play", "games-puzzles"] },
-    { "type": "featured-collection", "collection": "best-sellers", "heading": "Parents keep reordering these" },
+    { "type": "featured-collection", "collection": "new-arrivals", "heading": "Fresh from the tank", "note": "Switch to best-sellers with heading 'Parents keep reordering these' once items carry the bestseller tag." },
     { "type": "multicolumn", "heading": "Why Bubble Sharks", "columns": [
       { "title": "Honest age grades", "text": "Every toy says who it is for." },
       { "title": "Free shipping over $50", "text": "Flat $4.95 under, tracking always." },

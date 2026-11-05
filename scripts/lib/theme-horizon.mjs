@@ -153,7 +153,7 @@ export function mergeProduct(json, cfg) {
     const heading = b.slice("collapsible:".length);
     const cc = pp.collapsibles?.[heading] || {};
     const key = `row_${Object.keys(rows).length + 1}`;
-    const body = cc.source ? `{{ closest.${cc.source} }}` : cc.content || "";
+    const body = cc.source ? `<p>{{ closest.${cc.source}.value }}</p>` : cc.content || "";
     rows[key] = { type: "_accordion-row", settings: { heading, open_by_default: false, icon: cc.icon === "truck" ? "truck" : "none", width: 20 },
       blocks: { body: text(body, { width: "100%" }) }, block_order: ["body"] };
   }

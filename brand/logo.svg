@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 260" width="640" height="260" role="img" aria-label="Bubble Sharks">
+  <title>Bubble Sharks</title>
+  <!-- Friendly shark, side view, blowing bubbles. Colours from brand/brand-kit.md. -->
+  <g transform="translate(40 20)">
+    <!-- tail -->
+    <path d="M78 96 L18 56 L36 100 L18 144 Z" fill="#0E6BA8"/>
+    <!-- body -->
+    <path d="M70 100 C70 60 130 40 200 44 C260 48 320 70 352 100 C320 130 260 152 200 156 C130 160 70 140 70 100 Z" fill="#0E6BA8"/>
+    <!-- belly -->
+    <path d="M110 118 C150 142 260 146 338 108 C300 134 250 150 200 152 C160 154 130 140 110 118 Z" fill="#7FD1F5"/>
+    <!-- dorsal fin -->
+    <path d="M180 48 C196 10 232 6 250 20 C236 28 226 40 222 50 Z" fill="#0E6BA8"/>
+    <!-- side fin -->
+    <path d="M190 118 C180 140 190 152 212 158 C220 142 214 128 206 118 Z" fill="#0B2545" opacity="0.35"/>
+    <!-- eye -->
+    <circle cx="292" cy="92" r="14" fill="#F4FBFF"/>
+    <circle cx="296" cy="94" r="7" fill="#0B2545"/>
+    <circle cx="299" cy="91" r="2.5" fill="#F4FBFF"/>
+    <!-- smile -->
+    <path d="M300 118 C316 122 330 116 340 106" stroke="#0B2545" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <!-- gills -->
+    <path d="M236 86 C240 98 240 110 236 120 M250 84 C254 98 254 110 250 122" stroke="#0B2545" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <!-- bubbles -->
+    <circle cx="372" cy="78" r="9" fill="none" stroke="#7FD1F5" stroke-width="4"/>
+    <circle cx="392" cy="52" r="13" fill="none" stroke="#7FD1F5" stroke-width="4"/>
+    <circle cx="424" cy="22" r="18" fill="none" stroke="#7FD1F5" stroke-width="4"/>
+    <circle cx="430" cy="16" r="4" fill="#F4FBFF"/>
+  </g>
+  <!-- wordmark: Fredoka Bold, Deep -->
+  <text x="320" y="238" text-anchor="middle" font-family="Fredoka, 'Fredoka One', Nunito, Arial Rounded MT Bold, sans-serif" font-weight="700" font-size="56" fill="#0B2545" letter-spacing="1">Bubble Sharks</text>
+</svg>
