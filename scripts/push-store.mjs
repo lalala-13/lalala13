@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // Pushes store/ and content/ into a Shopify store through the Admin GraphQL API.
 //
-//   SHOPIFY_STORE=xxxx.myshopify.com SHOPIFY_ADMIN_TOKEN=shpat_... node scripts/push-store.mjs [--dry-run] [--only pages,policies,collections,menus]
+//   SHOPIFY_STORE=xxxx.myshopify.com SHOPIFY_CLIENT_ID=... SHOPIFY_CLIENT_SECRET=... node scripts/push-store.mjs [--dry-run] [--only pages,policies,collections,menus]
+//
+// Auth: a Dev Dashboard app's client ID + secret (exchanged for a 24h token via the client credentials grant),
+// or a ready-made SHOPIFY_ADMIN_TOKEN from an older admin-created custom app.
 //
 // Idempotent: existing pages, collections and menus (matched by handle) are updated, not duplicated.
 // Theme colours/fonts/sections (store/theme-settings.json) are applied separately in the theme editor.
@@ -19,10 +22,27 @@ const ONLY = onlyIdx >= 0 ? new Set(args[onlyIdx + 1].split(",")) : null;
 const want = (step) => !ONLY || ONLY.has(step);
 
 const STORE = process.env.SHOPIFY_STORE;
-const TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
-if (!DRY && !args.includes("--render") && (!STORE || !TOKEN)) {
-  console.error("Set SHOPIFY_STORE and SHOPIFY_ADMIN_TOKEN (or pass --dry-run).");
-  process.exit(1);
+const { SHOPIFY_CLIENT_ID: CLIENT_ID, SHOPIFY_CLIENT_SECRET: CLIENT_SECRET } = process.env;
+let TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
+if (!DRY && !args.includes("--render")) {
+  if (!STORE || !(TOKEN || (CLIENT_ID && CLIENT_SECRET))) {
+    console.error("Set SHOPIFY_STORE plus SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET (or SHOPIFY_ADMIN_TOKEN), or pass --dry-run.");
+    process.exit(1);
+  }
+  if (!TOKEN) {
+    const res = await fetch(`https://${STORE}/admin/oauth/access_token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ grant_type: "client_credentials", client_id: CLIENT_ID, client_secret: CLIENT_SECRET }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.access_token) {
+      console.error(`Token exchange failed (${res.status}): ${JSON.stringify(json)}`);
+      process.exit(1);
+    }
+    TOKEN = json.access_token;
+    console.log(`Got access token, scopes: ${json.scope}`);
+  }
 }
 
 async function gql(query, variables = {}) {

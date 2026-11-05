@@ -41,24 +41,32 @@ connect it to the store. Do nothing else in the app; Claude picks the products
 against the rules in `store/product-sourcing-rules.md`.
 
 ### A5. Give Claude access (10 min)
-1. In Shopify admin: **Settings → Apps and sales channels → Develop apps →
-   Allow custom app development → Create an app**. Name it `claude-store-builder`.
-2. Under **Configuration → Admin API integration** tick these scopes:
+Shopify no longer lets you create new custom apps inside the admin (since
+January 2026). They are made in the **Dev Dashboard** instead.
+
+1. Shopify admin → **Settings → Apps → Develop apps** (top right). It sends you
+   to the Dev Dashboard (dev.shopify.com). Sign in with the same account.
+2. **Create app** → "Start from Dev Dashboard" → name it `claude-store-builder`.
+3. On the version screen, under **Access → Scopes**, add:
    `write_products, read_products, write_content, read_content, write_themes,
    read_themes, write_online_store_navigation, read_online_store_navigation,
    write_publications, read_publications, read_orders, write_inventory,
-   read_inventory, write_metaobjects, read_metaobjects, read_locales`.
-3. Click **Install app**, then **Reveal token once**. Copy the token.
-4. In the Claude Code cloud environment (title bar → environment menu → Edit):
-   - Add two **secrets**: `SHOPIFY_STORE` = your `xxxx.myshopify.com` address
-     and `SHOPIFY_ADMIN_TOKEN` = the token. Never paste the token into chat.
-   - Under **Network access**, set it to a level that allows
-     `*.myshopify.com`, `admin.shopify.com`, `cdn.shopify.com` and
-     `bubblesharks.com` (or choose unrestricted). Right now every outbound host
-     is denied, which is why the Shopify connector could not connect.
-5. Optionally also connect the Shopify connector at
-   <https://claude.ai/customize/connectors>. Then start a **new** session and
-   say "build the Bubble Sharks store".
+   read_inventory, write_metaobjects, read_metaobjects, read_locales,
+   write_shipping, read_shipping, write_discounts, read_discounts,
+   write_legal_policies, read_legal_policies`.
+   Leave the App URL as is. Click **Release**.
+4. Back on the app's **Home**, click **Install app**, pick your store
+   (`hd2ykn-1r.myshopify.com`) and approve.
+5. Open the app's **Settings**. Copy the **Client ID** and **Client secret**.
+6. In the Claude Code cloud environment (title bar → environment menu → Edit):
+   - Add three **secrets**: `SHOPIFY_STORE` = `hd2ykn-1r.myshopify.com`,
+     `SHOPIFY_CLIENT_ID` and `SHOPIFY_CLIENT_SECRET`. Never paste the secret
+     into chat.
+   - Under **Network access**, allow `hd2ykn-1r.myshopify.com`,
+     `admin.shopify.com`, `cdn.shopify.com` and `bubblesharks.com`, or choose
+     unrestricted.
+7. Start a **new** session and say "build the Bubble Sharks store". The script
+   swaps the client ID and secret for a short-lived token each run.
 
 ## Part B — What Claude does next (no action from you)
 1. Push brand, theme settings, collections, navigation, pages and policies
