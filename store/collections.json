@@ -1,0 +1,21 @@
+[
+  { "handle": "bath-toys", "title": "Bath Toys", "tag": "bath",
+    "description": "Squirters, boats and bubble makers that turn bath time into the best ten minutes of the day." },
+  { "handle": "outdoor-water-play", "title": "Outdoor & Water Play", "tag": "outdoor",
+    "description": "Water blasters, sprinklers and beach kits for sunny-day chaos." },
+  { "handle": "stem-building", "title": "STEM & Building", "tag": "stem",
+    "description": "Blocks, kits and brainy gadgets that sneak learning into play." },
+  { "handle": "plush-cuddly", "title": "Plush & Cuddly", "tag": "plush",
+    "description": "Soft sharks and friends for bedtime and car rides." },
+  { "handle": "sensory-fidget", "title": "Sensory & Fidget", "tag": "sensory",
+    "description": "Pop-its, squishies and calm-down kits for busy hands." },
+  { "handle": "games-puzzles", "title": "Games & Puzzles", "tag": "games",
+    "description": "Family game nights and rainy-day puzzles, ages 3 and up." },
+  { "handle": "under-15", "title": "Under $15", "rule": { "column": "VARIANT_PRICE", "relation": "LESS_THAN", "condition": "15" },
+    "description": "Pocket-money treats and party-bag heroes." },
+  { "handle": "ages-3-5", "title": "Ages 3–5", "tag": "age-3-5", "description": "Chunky, safe and bright for little hands." },
+  { "handle": "ages-6-8", "title": "Ages 6–8", "tag": "age-6-8", "description": "Big imaginations, bigger builds." },
+  { "handle": "ages-9-12", "title": "Ages 9–12", "tag": "age-9-12", "description": "Gadgets, kits and games that still feel cool." },
+  { "handle": "new-arrivals", "title": "New Arrivals", "tag": "new", "description": "Fresh from the tank." },
+  { "handle": "best-sellers", "title": "Best Sellers", "tag": "bestseller", "description": "The toys parents reorder." }
+]

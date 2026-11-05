@@ -1,0 +1,29 @@
+{
+  "main-menu": [
+    { "title": "Shop all", "url": "/collections/all" },
+    { "title": "By type", "url": "/collections", "items": [
+      { "title": "Bath Toys", "url": "/collections/bath-toys" },
+      { "title": "Outdoor & Water Play", "url": "/collections/outdoor-water-play" },
+      { "title": "STEM & Building", "url": "/collections/stem-building" },
+      { "title": "Plush & Cuddly", "url": "/collections/plush-cuddly" },
+      { "title": "Sensory & Fidget", "url": "/collections/sensory-fidget" },
+      { "title": "Games & Puzzles", "url": "/collections/games-puzzles" }
+    ]},
+    { "title": "By age", "url": "/collections", "items": [
+      { "title": "Ages 3–5", "url": "/collections/ages-3-5" },
+      { "title": "Ages 6–8", "url": "/collections/ages-6-8" },
+      { "title": "Ages 9–12", "url": "/collections/ages-9-12" }
+    ]},
+    { "title": "Under $15", "url": "/collections/under-15" },
+    { "title": "New", "url": "/collections/new-arrivals" },
+    { "title": "About", "url": "/pages/about" }
+  ],
+  "footer": [
+    { "title": "FAQ", "url": "/pages/faq" },
+    { "title": "Shipping & Returns", "url": "/pages/shipping-returns" },
+    { "title": "Contact", "url": "/pages/contact" },
+    { "title": "Privacy policy", "url": "/policies/privacy-policy" },
+    { "title": "Refund policy", "url": "/policies/refund-policy" },
+    { "title": "Terms of service", "url": "/policies/terms-of-service" }
+  ]
+}
