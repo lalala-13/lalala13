@@ -42,7 +42,13 @@ export async function connect() {
     const title = text.match(/<title>([^<]*)<\/title>/i)?.[1]?.trim();
     const code = title?.match(/Oauth error (\w+)/i)?.[1] || json.error;
     console.error(`Token exchange failed (${res.status}): ${code || title || text.slice(0, 200)}`);
+    if (json.error_description) console.error(`  Shopify says: ${json.error_description}`);
     if (OAUTH_HELP[code]) console.error(`  Fix: ${OAUTH_HELP[code]}`);
+    // Shape of the three values, never the values themselves.
+    const shape = (v) => `${v.length} chars${v !== v.trim() ? ", has leading/trailing spaces" : ""}${/[<>'"]/.test(v) ? ", contains quotes or angle brackets" : ""}`;
+    console.error(`  SHOPIFY_STORE: ${/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(STORE) ? "looks right" : "NOT a bare *.myshopify.com address"} (${shape(STORE)})`);
+    console.error(`  SHOPIFY_CLIENT_ID: ${/^[0-9a-f]{32}$/.test(CLIENT_ID) ? "looks right" : "NOT 32 hex characters"} (${shape(CLIENT_ID)})`);
+    console.error(`  SHOPIFY_CLIENT_SECRET: ${/^shp[a-z]{2}_[0-9a-f]{32}$/.test(CLIENT_SECRET) ? "looks right" : /^[0-9a-f]{32}$/.test(CLIENT_SECRET) ? "32 hex characters, no shp prefix" : "unexpected shape"} (${shape(CLIENT_SECRET)})`);
     process.exit(1);
   }
   TOKEN = json.access_token;
