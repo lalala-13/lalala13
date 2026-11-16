@@ -67,6 +67,7 @@ async function pushPolicies() {
       if (!/Automatic management/i.test(e.message)) throw e;
       // Shopify generates this policy itself until the owner switches that off in Settings → Policies.
       console.log(`  skipped: Shopify manages this policy automatically. Settings → Policies → ${name} → turn off automatic management, then re-run with --only policies.`);
+      console.log(`  Shopify said: ${e.message}`);
     }
   }
 }
