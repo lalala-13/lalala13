@@ -10,7 +10,7 @@ supplier app) and everything Claude does once it has API access.
 
 | Folder | What is in it |
 | --- | --- |
-| `docs/` | Owner setup guide (`SETUP-GUIDE.md`) and the launch hand-off checklist (`HANDOFF-CHECKLIST.md`) |
+| `docs/` | Owner setup guide (`SETUP-GUIDE.md`), the launch hand-off checklist (`HANDOFF-CHECKLIST.md`) and a prompt for continuing the build in another Claude Code session (`CONTINUE-PROMPT.md`) |
 | `brand/` | Brand kit (name, voice, colours, fonts, logo brief), SVG logo drafts and the generated PNG set in `images/` (logo, favicon, hero, collection and placeholder images) |
 | `content/pages/` | About, FAQ, Contact, Shipping & Returns page copy |
 | `content/policies/` | Privacy, Refund, Shipping and Terms policy drafts |
@@ -22,6 +22,7 @@ supplier app) and everything Claude does once it has API access.
 ## Commands
 
 ```bash
+node scripts/status.mjs                            # read-only snapshot of what is live
 node scripts/push-store.mjs --dry-run              # preview everything
 node scripts/push-store.mjs                        # pages, policies, collections, menus, shipping, discount, theme, blog
 node scripts/push-store.mjs --only shipping,theme  # a subset
